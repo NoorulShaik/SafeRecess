@@ -22,15 +22,32 @@ function loadConfig() {
 }
 
 /**
+ * Sanitise a raw sub-index value from an API response.
+ * Accepts a number or numeric string; returns null for null, undefined,
+ * NaN, Infinity, non-numeric strings (e.g. "-") and negative values.
+ * A sub-index above 500 is kept as-is; the interpolation handles it.
+ *
+ * @param {*} v - Raw value
+ * @returns {number|null}
+ */
+export function sanitiseSubindex(v) {
+  if (v === null || v === undefined) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
+/**
  * Linear interpolation: find concentration from AQI sub-index.
  * Uses piecewise linear interpolation within EPA breakpoint segments.
  *
- * @param {number} aqi - AQI sub-index value
+ * @param {number} aqi - AQI sub-index value (must be a finite non-negative number)
  * @param {Array} breakpoints - EPA breakpoint table [{c_low, c_high, aqi_low, aqi_high}, ...]
  * @returns {number|null} - Concentration in µg/m³, or null if out of range
  */
 function aqiToConcentration(aqi, breakpoints) {
-  if (aqi === null || aqi === undefined || aqi < 0) {
+  // Reject anything that is not a finite non-negative number
+  if (!Number.isFinite(aqi) || aqi < 0) {
     return null;
   }
 
@@ -69,7 +86,8 @@ function aqiToConcentration(aqi, breakpoints) {
  * @returns {number} - Level 0-3, or 3 if above all bands
  */
 function concentrationToLevel(concentration, bands) {
-  if (concentration === null || concentration === undefined) {
+  // Also reject NaN and Infinity, which pass the null/undefined check
+  if (concentration === null || concentration === undefined || !Number.isFinite(concentration)) {
     return null;
   }
 
@@ -148,7 +166,7 @@ export function pm10ConcentrationToLevel(concentration) {
  * @returns {number|null} - AQI sub-index
  */
 export function concentrationToAqi(concentration, breakpoints) {
-  if (concentration === null || concentration === undefined || concentration < 0) {
+  if (concentration === null || concentration === undefined || !Number.isFinite(concentration) || concentration < 0) {
     return null;
   }
 
@@ -180,9 +198,13 @@ export function concentrationToAqi(concentration, breakpoints) {
 export function convertToLevel(pm25Subindex, pm10Subindex, epaTableVersion = null) {
   const cfg = loadConfig();
 
+  // Sanitise inputs: NaN, strings like "-", negative numbers all count as missing
+  const pm25 = sanitiseSubindex(pm25Subindex);
+  const pm10 = sanitiseSubindex(pm10Subindex);
+
   // Convert both pollutants
-  const est_pm25 = pm25Subindex !== null ? pm25SubindexToConcentration(pm25Subindex, epaTableVersion) : null;
-  const est_pm10 = pm10Subindex !== null ? pm10SubindexToConcentration(pm10Subindex) : null;
+  const est_pm25 = pm25 !== null ? pm25SubindexToConcentration(pm25, epaTableVersion) : null;
+  const est_pm10 = pm10 !== null ? pm10SubindexToConcentration(pm10) : null;
 
   // Get levels for each
   const pm25Level = est_pm25 !== null ? pm25ConcentrationToLevel(est_pm25) : null;
