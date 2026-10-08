@@ -1,0 +1,28 @@
+{
+  "stations": [
+    { "station_id": 10120, "name": "Bramprakash Ayurvedic Hospital, Najafgarh", "area": "Najafgarh" },
+    { "station_id": 10708, "name": "Mundka", "area": "Mundka" },
+    { "station_id": 2553, "name": "Anand Vihar", "area": "Anand Vihar" },
+    { "station_id": 10116, "name": "DITE Okhla", "area": "Okhla" },
+    { "station_id": 2556, "name": "R.K. Puram", "area": "R.K. Puram" }
+  ],
+  "schools": [
+    { "school_id": "najafgarh-a", "display_name": "Sample School, Najafgarh A", "station_id": 10120, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "najafgarh-b", "display_name": "Sample School, Najafgarh B", "station_id": 10120, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "mundka-a", "display_name": "Sample School, Mundka A", "station_id": 10708, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "mundka-b", "display_name": "Sample School, Mundka B", "station_id": 10708, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "anand-vihar-a", "display_name": "Sample School, Anand Vihar A", "station_id": 2553, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "anand-vihar-b", "display_name": "Sample School, Anand Vihar B", "station_id": 2553, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "okhla-a", "display_name": "Sample School, Okhla A", "station_id": 10116, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "okhla-b", "display_name": "Sample School, Okhla B", "station_id": 10116, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "rk-puram-a", "display_name": "Sample School, R.K. Puram A", "station_id": 2556, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" },
+    { "school_id": "rk-puram-b", "display_name": "Sample School, R.K. Puram B", "station_id": 2556, "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX" }
+  ],
+  "demo_school": {
+    "school_id": "demo",
+    "display_name": "Demo School (simulation only)",
+    "is_demo_school": true,
+    "baseline_level": 0,
+    "contact_email": "REPLACE_WITH_YOUR_DEMO_INBOX"
+  }
+}

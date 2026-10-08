@@ -1,0 +1,26 @@
+{
+  "status": "ok",
+  "data": {
+    "aqi": 129,
+    "idx": 10120,
+    "attributions": [
+      { "url": "http://dpccairdata.com/", "name": "Delhi Pollution Control Commitee (Government of NCT of Delhi)", "logo": "India-DPCCC.png" },
+      { "url": "https://waqi.info/", "name": "World Air Quality Index Project" }
+    ],
+    "city": {
+      "geo": [28.572714, 76.933433],
+      "name": "Bramprakash Ayurvedic Hospital, Najafgarh, Delhi, Delhi, India",
+      "url": "https://aqicn.org/city/delhi/bramprakash-ayurvedic-hospital--najafgarh",
+      "location": ""
+    },
+    "dominentpol": "pm25",
+    "iaqi": {
+      "co": { "v": 2.3 }, "dew": { "v": 16 }, "h": { "v": 50.2 }, "no2": { "v": 2.9 }, "o3": { "v": 2.4 },
+      "p": { "v": 997.2 }, "pm10": { "v": 96 }, "pm25": { "v": 129 }, "so2": { "v": 6.6 },
+      "t": { "v": 32.900000000000006 }, "w": { "v": 0.4 }, "wd": { "v": 243.2 }, "wg": { "v": 8.7 }
+    },
+    "time": { "s": "2026-10-06 09:00:00", "tz": "+05:30", "v": 1791277200, "iso": "2026-10-06T09:00:00+05:30" },
+    "forecast": {},
+    "debug": { "sync": "2026-10-06T13:18:22+09:00" }
+  }
+}
