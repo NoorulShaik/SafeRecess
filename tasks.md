@@ -19,6 +19,7 @@ Do one task at a time. Run the tests, read the diff, commit.
 
 ## Saturday: dashboard and deploy
 8. **Read API:** `GET /schools` returns status, category, recommendation, driving pollutant, reading time, credits.
+Compute staleness at read time from the stored source timestamp, so the dashboard shows "Data unavailable" even if the fetch Lambda is broken.
 9. **React dashboard:** cards sorted worst-first, colour plus text, legend, "sample data" and "estimated" notices, credits footer, demo control, Alert status panel, recent alerts (P1).
 10. **Deploy on Amplify:** public URL, phone layout check. Stretch only if all above works: Leaflet map from our own data; Bedrock advisory.
 

@@ -124,6 +124,16 @@ describe('parseFeed', () => {
     expect(result.error).toContain('error');
   });
 
+  it('returns error for WAQI error response where data is a string', () => {
+    // WAQI returns {"status":"error","data":"Invalid key"} for bad tokens
+    const errorResponse = { status: 'error', data: 'Invalid key' };
+
+    expect(() => parseFeed(errorResponse)).not.toThrow();
+    const result = parseFeed(errorResponse);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('error');
+  });
+
   it('returns error for missing time.iso', () => {
     const result = parseFeed({
       status: 'ok',
@@ -196,16 +206,16 @@ describe('isStale', () => {
     expect(isStale('invalid-date', currentTime)).toBe(true);
   });
 
-  it('handles edge case: exactly at threshold', () => {
+  it('exactly stale_after_hours old is still fresh (not stale)', () => {
+    // A reading exactly 3 hours old should be fresh, not stale
     const timestamp = '2026-10-06T09:00:00+05:30';
     const currentTime = new Date('2026-10-06T12:00:00+05:30'); // exactly 3 hours later
 
-    // 3 hours stale threshold: age must be > 3 hours to be stale
-    // At exactly 3 hours, it's NOT stale yet
     expect(isStale(timestamp, currentTime, 3)).toBe(false);
   });
 
-  it('handles edge case: just over threshold', () => {
+  it('older than stale_after_hours is stale', () => {
+    // A reading even 1 second over the threshold is stale
     const timestamp = '2026-10-06T09:00:00+05:30';
     const currentTime = new Date('2026-10-06T12:00:01+05:30'); // 3 hours + 1 second
 
