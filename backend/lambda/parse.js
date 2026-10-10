@@ -3,20 +3,9 @@
  * Pure functions with no AWS calls.
  */
 
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-let config;
+import config from './data/config.json' with { type: 'json' };
 
 function loadConfig() {
-  if (!config) {
-    const configPath = join(__dirname, '..', '..', 'data', 'config.json');
-    config = JSON.parse(readFileSync(configPath, 'utf-8'));
-  }
   return config;
 }
 
@@ -43,6 +32,9 @@ export function parseFeed(feedResponse) {
     return { error: 'Invalid response: missing data object' };
   }
 
+  // Extract station ID (idx)
+  //const stationId = data.idx ?? null;
+  // Extract station ID (idx) and format it to match our database strings (e.g., "@7397")
   // Extract station ID (idx)
   const stationId = data.idx ?? null;
 

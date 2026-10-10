@@ -29,7 +29,8 @@ function throttled(key, limit = 30, windowMs = 60_000) {
   return false;
 }
 
-function publicSchool(school, now = new Date()) {
+function publicSchool(school) {
+  const now = new Date();
   const staleAt = Number(process.env.STALE_AFTER_HOURS || 3) * 60 * 60 * 1000;
   const stale = school.source_timestamp &&
     now.getTime() - new Date(school.source_timestamp).getTime() > staleAt;
@@ -101,7 +102,9 @@ export function createApi(storeImpl = store, options = {}) {
       const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
       await storeImpl.updateSchoolReading('demo', {
         current_level: conversion.level, category_label: config[conversion.level],
-        est_pm25: target.pm25, est_pm10: target.pm10, pm25_subindex: pm25, pm10_subindex: pm10,
+        est_pm25: target.pm25, est_pm10: target.pm10, 
+        pm25Subindex: pm25, pm10Subindex: pm10,
+        pm25_subindex: pm25, pm10_subindex: pm10,
         driving_pollutant: conversion.driving_pollutant, is_simulated: true,
         sim_expires_at: expires, last_sim_at: new Date().toISOString(), source_timestamp: new Date().toISOString(),
         last_updated: new Date().toISOString(),
@@ -118,6 +121,7 @@ export function createApi(storeImpl = store, options = {}) {
     if (method === 'POST' && path === '/simulate/reset') {
       await storeImpl.updateSchoolReading('demo', {
         current_level: 0, category_label: config[0], est_pm25: null, est_pm10: null,
+        pm25Subindex: null, pm10Subindex: null,
         pm25_subindex: null, pm10_subindex: null, driving_pollutant: null,
         is_simulated: false, sim_expires_at: null, source_timestamp: null, last_updated: new Date().toISOString(),
       });

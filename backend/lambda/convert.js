@@ -3,21 +3,9 @@
  * Reads EPA breakpoints and India bands from config.json.
  */
 
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load config at module load time
-const configPath = join(__dirname, '..', '..', 'data', 'config.json');
-let config;
+import config from './data/config.json' with { type: 'json' };
 
 function loadConfig() {
-  if (!config) {
-    config = JSON.parse(readFileSync(configPath, 'utf-8'));
-  }
   return config;
 }
 

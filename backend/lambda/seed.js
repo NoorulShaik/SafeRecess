@@ -5,15 +5,28 @@
  * Usage: node seed.js
  */
 
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import store from './store.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const moduleDirectory = dirname(fileURLToPath(import.meta.url));
+const rootDataPath = join(moduleDirectory, '..', '..', 'data', 'stations_and_schools.json');
+const bundledDataPath = join(moduleDirectory, 'data', 'stations_and_schools.json');
 
-const DATA_PATH = join(__dirname, '..', '..', 'data', 'stations_and_schools.json');
+function loadSeedData() {
+  try {
+    return JSON.parse(readFileSync(rootDataPath, 'utf8'));
+  } catch (rootError) {
+    try {
+      return JSON.parse(readFileSync(bundledDataPath, 'utf8'));
+    } catch {
+      throw new Error(`Unable to load stations and schools data from ${rootDataPath}`, { cause: rootError });
+    }
+  }
+}
+
+const data = loadSeedData();
 
 /**
  * Load and seed school data.
@@ -22,16 +35,16 @@ const DATA_PATH = join(__dirname, '..', '..', 'data', 'stations_and_schools.json
  */
 export async function seedSchools(options = {}, storeImpl = store) {
   const { demoInbox = process.env.DEMO_INBOX } = options;
-
-  // Load seed data
-  const data = JSON.parse(readFileSync(DATA_PATH, 'utf-8'));
+  if (!demoInbox) {
+    throw new Error('DEMO_INBOX environment variable is required');
+  }
 
   const schools = [];
 
   // Process regular schools (two per station)
   for (const school of data.schools) {
     const contactEmail = school.contact_email === 'REPLACE_WITH_YOUR_DEMO_INBOX'
-      ? demoInbox || 'demo@example.com'
+      ? demoInbox
       : school.contact_email;
 
     schools.push({
@@ -61,7 +74,7 @@ export async function seedSchools(options = {}, storeImpl = store) {
   if (data.demo_school) {
     const demo = data.demo_school;
     const demoEmail = demo.contact_email === 'REPLACE_WITH_YOUR_DEMO_INBOX'
-      ? demoInbox || 'demo@example.com'
+      ? demoInbox
       : demo.contact_email;
 
     schools.push({
@@ -81,7 +94,7 @@ export async function seedSchools(options = {}, storeImpl = store) {
       driving_pollutant: null,
       source_timestamp: null,
       last_updated: null,
-      station_name: null,
+      station_name: demo.station_id ? data.stations.find(s => s.station_id === demo.station_id)?.name || null : null,
       attribution: null,
       prev_level: null,
       is_simulated: false,
@@ -103,15 +116,14 @@ export async function seedSchools(options = {}, storeImpl = store) {
  * Get the list of stations from seed data.
  */
 export function getStations() {
-  const data = JSON.parse(readFileSync(DATA_PATH, 'utf-8'));
   return data.stations;
 }
 
 // Run if called directly
-if (process.argv[1] === __filename) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   seedSchools()
     .then(result => {
-      console.log('Seeded:', result);
+      console.log(`Seeded ${result.seeded} items.`);
     })
     .catch(err => {
       console.error('Seed failed:', err);

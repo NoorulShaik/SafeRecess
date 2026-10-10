@@ -1,0 +1,63 @@
+{
+  "notes": [
+    "India bands are CPCB 24-hour breakpoints (verified). Round concentration to the nearest integer, then use inclusive upper bounds.",
+    "epa_pm25 tables: '2024' (effective May 2024) and '2012' (previous) are verified against EPA material. Which one WAQI applies is unconfirmed: validate at Anand Vihar, then set epa_pm25_version.",
+    "epa_pm10 is from memory and still needs checking against EPA's AQI technical document.",
+    "The top bracket upper bounds only matter for forward and back conversion; any value above 121 (PM2.5) or 351 (PM10) is Level 3 anyway."
+  ],
+  "india_bands_upper_inclusive": {
+    "pm25": [
+      { "upper": 60, "level": 0 },
+      { "upper": 90, "level": 1 },
+      { "upper": 120, "level": 2 },
+      { "upper": null, "level": 3 }
+    ],
+    "pm10": [
+      { "upper": 100, "level": 0 },
+      { "upper": 250, "level": 1 },
+      { "upper": 350, "level": 2 },
+      { "upper": null, "level": 3 }
+    ]
+  },
+  "epa_pm25_version": "2024",
+  "epa_pm25": {
+    "2024": [
+      { "c_low": 0, "c_high": 9.0, "aqi_low": 0, "aqi_high": 50 },
+      { "c_low": 9.1, "c_high": 35.4, "aqi_low": 51, "aqi_high": 100 },
+      { "c_low": 35.5, "c_high": 55.4, "aqi_low": 101, "aqi_high": 150 },
+      { "c_low": 55.5, "c_high": 125.4, "aqi_low": 151, "aqi_high": 200 },
+      { "c_low": 125.5, "c_high": 225.4, "aqi_low": 201, "aqi_high": 300 },
+      { "c_low": 225.5, "c_high": 325.4, "aqi_low": 301, "aqi_high": 500 }
+    ],
+    "2012": [
+      { "c_low": 0, "c_high": 12.0, "aqi_low": 0, "aqi_high": 50 },
+      { "c_low": 12.1, "c_high": 35.4, "aqi_low": 51, "aqi_high": 100 },
+      { "c_low": 35.5, "c_high": 55.4, "aqi_low": 101, "aqi_high": 150 },
+      { "c_low": 55.5, "c_high": 150.4, "aqi_low": 151, "aqi_high": 200 },
+      { "c_low": 150.5, "c_high": 250.4, "aqi_low": 201, "aqi_high": 300 },
+      { "c_low": 250.5, "c_high": 350.4, "aqi_low": 301, "aqi_high": 400 },
+      { "c_low": 350.5, "c_high": 500.4, "aqi_low": 401, "aqi_high": 500 }
+    ]
+  },
+  "epa_pm10": [
+    { "c_low": 0, "c_high": 54, "aqi_low": 0, "aqi_high": 50 },
+    { "c_low": 55, "c_high": 154, "aqi_low": 51, "aqi_high": 100 },
+    { "c_low": 155, "c_high": 254, "aqi_low": 101, "aqi_high": 150 },
+    { "c_low": 255, "c_high": 354, "aqi_low": 151, "aqi_high": 200 },
+    { "c_low": 355, "c_high": 424, "aqi_low": 201, "aqi_high": 300 },
+    { "c_low": 425, "c_high": 504, "aqi_low": 301, "aqi_high": 400 },
+    { "c_low": 505, "c_high": 604, "aqi_low": 401, "aqi_high": 500 }
+  ],
+  "stale_after_hours": 3,
+  "fetch_every_minutes": 30,
+  "simulation": {
+    "presets_ugm3": {
+      "moderate": { "pm25": 75, "pm10": 60 },
+      "poor": { "pm25": 105, "pm10": 60 },
+      "very_poor": { "pm25": 180, "pm10": 60 }
+    },
+    "expiry_minutes": 10,
+    "cooldown_minutes": 3,
+    "max_demo_emails_per_hour": 5
+  }
+}

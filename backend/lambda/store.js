@@ -17,7 +17,7 @@ import {
 // DynamoDB implementation
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TABLE_NAME = process.env.SCHOOL_TABLE_NAME || 'SafeRecess-Schools';
+const TABLE_NAME = process.env.SCHOOLS_TABLE || 'SafeRecess-Schools';
 const ALERTS_TABLE_NAME = process.env.ALERTS_TABLE_NAME || 'SafeRecess-Alerts';
 
 let ddbClient;
@@ -25,7 +25,7 @@ let docClient;
 
 function getDocClient() {
   if (!docClient) {
-    ddbClient = new DynamoDBClient({});
+    ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
     docClient = DynamoDBDocumentClient.from(ddbClient, {
       marshallOptions: { removeUndefinedValues: true },
     });

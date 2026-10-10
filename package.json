@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "seed": "node backend/lambda/seed.js"
   },
   "dependencies": {
     "react": "^18.3.1",
