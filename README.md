@@ -1,145 +1,399 @@
-# SafeRecess - Air Quality Alert System for Delhi Schools
+﻿# SafeRecess
 
-## Overview
-SafeRecess is a per-school air quality safety status system for Delhi that provides email alerts when air quality worsens. This hackathon project (WeMakeDevs x AWS, Environmental Hacks) uses React/Vite frontend with Node.js Lambda backend and various AWS services.
+SafeRecess is a Delhi school air-quality monitoring and alerting platform. It turns live station-level AQI readings into a simple decision-support dashboard for principals, PE teachers, and parents: is it safe for students to be outside today, and when should they be alerted?
 
-## Features Implemented
+The system combines:
+- A React + Vite frontend dashboard
+- AWS API Gateway + Lambda APIs
+- DynamoDB for school and alert state
+- SNS for email alerts
+- EventBridge schedule-driven WAQI polling
+- Data conversion logic that maps AQI readings into India CPCB-style safety levels
 
-### Phase 1: Dashboard UI (Completed)
-- React/Vite dashboard showing school air quality levels
-- Summary strip with level counts and newest reading time
-- School list sorted by worst level first with search and area/station filters
-- Individual school cards showing:
-  - Level badge (color + text)
-  - Live PM2.5/PM10 values in µg/m³
-  - Driving pollutant and source AQI
-  - Recommendation and reading time
-  - Stale data handling (grey "Data unavailable" for readings >3 hours old)
-- Demo school card (owner-only, read-only for visitors)
-- Legend showing Levels 0-3 with explanation: "Estimated India (CPCB) categories, based on PM2.5 and PM10 (worse of the two)"
-- Footer with dynamic data credits from API, disclaimer, and privacy notice
-- Mobile-first responsive design with WCAG AA contrast
-- Skeleton loading, empty state, and error handling
-- 5-minute polling of `/schools` endpoint
-- Mock data mode for development (`VITE_USE_MOCK=true`)
+This project was built as a hackathon-ready solution for the WeMakeDevs x AWS Environmental Hacks challenge.
 
-### Phase 2: Backend Implementation (Completed)
-- **Two SNS Topics Architecture:**
-  - `SchoolAlertsTopic`: Public subscriptions for real schools
-  - `DemoAlertsTopic`: Owner-only topic for demo school alerts
-- **POST /subscribe endpoint:**
-  - Email validation (format checking)
-  - Role validation (`parent`, `principal`, `pe_teacher`)
-  - School ID validation (existence and demo school rejection)
-  - Support for `school_ids` array (max 10 schools abuse limit)
-  - Per-email cooldown enforcement (5 minutes)
-  - Subscription merging (updates existing filter policy with new school IDs)
-  - Proper 202 response with confirmation message
-- **Demo Key Protection:**
-  - `POST /simulate` and `POST /simulate/reset` require `x-demo-key` header
-  - Returns 403 for missing/invalid demo key
-- **Abuse Prevention:**
-  - API throttling: 5 requests/minute for `/subscribe`, 10/minute for simulate endpoints
-  - Per-email cooldown: 1 subscription request per email per 5 minutes
-  - School cap: Maximum 10 schools per subscription request
-- **Alert Enhancements:**
-  - Alert emails include data credits line and "Sample school: demo project."
-  - Demo alerts use `[DEMO]` prefix and go to `DemoAlertsTopic`
-  - School alerts go to `SchoolAlertsTopic`
-- **IAM Permissions:**
-  - Least-privilege permissions for Lambda functions
-  - `ApiFunction` has `sns:Subscribe`, `sns:ListSubscriptionsByTopic`, `sns:SetSubscriptionAttributes` on `SchoolAlertsTopic`
-  - All functions have publish permissions to appropriate SNS topics
-- **Security:**
-  - No secrets in frontend or repository
-  - WAQI token and demo key only in Lambda environment variables
-  - Demo key never stored in localStorage (kept in memory only)
-  - No logging of sensitive information
-- **Comprehensive Test Suite:**
-  - Validation tests for all endpoint inputs
-  - Demo school rejection tests
-  - Demo key validation tests
-  - Abuse prevention tests (throttling, cooldown, school limits)
-  - Functional tests for subscription flows
+## Why this exists
+Delhi schools often need a fast operational decision when air quality worsens. A raw AQI number is not enough for a school administrator or parent. SafeRecess converts that data into a clear action level and recommendation:
+- Level 0: Good / Satisfactory
+- Level 1: Moderate
+- Level 2: Poor
+- Level 3: Very Poor / Severe
 
-### Phase 3: Frontend Integration (In Progress)
-- Subscribe drawer/modal wired to POST `/subscribe` endpoint
-- Demo key control that keeps key in memory only (never localStorage)
-- Demo simulation controls shown only after owner enters valid demo key
-- Role-specific form fields (email, role, school selection)
-- Proper loading/error/success states for subscription process
-- Alert status panel for demo school simulations
+Each school card shows the current status, local recommendation, pollutant context, and reading timestamp.
 
-## Technical Stack
-- **Frontend:** React + Vite, CSS3, Fetch API
-- **Backend:** Node.js Lambda (AWS SDK v3), ESBuild bundler
-- **Infrastructure:** AWS SAM, DynamoDB, SNS (2 topics), EventBridge, API Gateway (HTTP API), CloudWatch
-- **Data:** WAQI API (station ID-based fetching), EPA breakpoint conversion to µg/m³ → Indian CPCB categories
-- **Development:** Vitest for backend testing
+## Project goals
+- Show live air-quality status for sample Delhi schools
+- Use PM2.5 and PM10 to determine the worse school-level condition
+- Send email alerts when a school becomes worse
+- Support owner-only demo simulation without exposing the demo key to visitors
+- Keep the system secure, minimal, and AWS-native
 
-## Security & Compliance
-- ✅ No secrets committed to repository
-- ✅ WAQI token only in Lambda environment variable
-- ✅ Demo key protected with 403 responses for missing/invalid keys
-- ✅ Demo key kept in memory only (never localStorage)
-- ✅ Least-privilege IAM principles
-- ✅ No logging of sensitive information (tokens, emails, keys)
-- ✅ Demo school owner-only access controls
-- ✅ Abuse prevention (throttling, cooldowns, caps)
-- ✅ CORS restricted to known origins
-- ✅ Input validation and sanitization
-- ✅ School ID validation prevents enumeration
+## Architecture overview
 
-## Data Rules (Per FRONTEND.md & PRD.md)
-- Fetch by STATION ID (`feed/@<id>`), once per station per cycle, every 30 minutes
-- Use `time.iso` for timestamps (NEVER use `time.v`)
-- Skip reading if `time.iso` is not newer than stored reading
-- Reading older than 3 hours = "Data unavailable" (grey)
-- Convert `iaqi.pm25.v` and `iaqi.pm10.v` to µg/m³ using EPA breakpoints in config
-- Round to nearest integer, map to India bands, use WORSE level
-- Missing pollutant ignored; both missing = unavailable
-- Store only LATEST reading per school (overwrite, no history)
-- Show credits from response's `attributions` list on dashboard and alert emails
-- Label levels: "Estimated, India (CPCB) categories, based on PM2.5 and PM10 (worse of the two)"
+SafeRecess follows a simple event-driven AWS design.
 
-## Alert Logic
-- Send on FIRST reading showing worse level
-- All-clear only after 2 consecutive lower readings
-- Alert log stores school, time, and from/to levels only
-- Demo school: never fetched live, baseline level 0, simulation presets converted forward to sub-indices
+### Frontend (React/Vite)
+- Fetches `/schools` from the API
+- Renders school cards with level badges, values, and recommendations
+- Allows owners to enter a demo key to reveal demo controls
+- Allows subscribers to submit an email, role, and selected schools
 
-## Demo School Controls (Owner Only)
-- `POST /simulate` (severity only) and `POST /simulate/reset`
-- Cooldown: 3 minutes between simulations
-- Auto-expiry: ~10 minutes for simulation
-- Hourly email cap: 5 demo alerts per hour
-- Single demo inbox (from `DEMO_INBOX` environment variable)
-- Subject prefix: `[DEMO]`
-- Reset sends no all-clear email
-- Alert status panel shows SNS result ("accepted by SNS")
+### API layer (AWS Lambda)
+- `GET /schools` returns public school status
+- `GET /schools/{id}` returns a single school
+- `GET /alerts` returns stored alert history
+- `POST /subscribe` validates and registers alert subscriptions
+- `POST /simulate` and `POST /simulate/reset` manage owner-only demo behavior
 
-## Build & Deployment
+### Data and event layer
+- `FetchFunction` runs on a schedule and polls WAQI
+- School reading data is stored in DynamoDB
+- Alerts are written to DynamoDB and published to SNS topics
+
+### AWS services used
+- API Gateway HTTP API
+- AWS Lambda
+- DynamoDB
+- SNS
+- EventBridge schedule
+- CloudWatch logging
+- AWS SAM for deployment
+
+## High-level flow
+
+1. The frontend loads the dashboard and calls `GET /schools`.
+2. The API reads the current school records from DynamoDB.
+3. The scheduled `FetchFunction` polls WAQI station feeds every 30 minutes.
+4. WAQI readings are normalized and converted into a school level.
+5. The updated data is saved back to DynamoDB.
+6. If a school crosses into a worse level, an alert is created and published to the SNS topic for that audience.
+7. Subscribed users receive email alerts after confirmation.
+8. The demo school can be simulated by the owner only using a protected demo key.
+
+## Detailed runtime flow
+
+### 1) Dashboard load flow
+- The browser loads the app and calls the API endpoint `/schools`.
+- The Lambda API returns a list of school objects with fields like:
+  - `school_id`
+  - `display_name`
+  - `station_name`
+  - `level`
+  - `category_label`
+  - `recommendation`
+  - `est_pm25`
+  - `est_pm10`
+  - `reading_timestamp`
+  - `attribution`
+  - `is_demo_school`
+- The frontend sorts schools by worst level first and renders cards.
+- A polling loop re-fetches every 5 minutes to refresh status.
+
+### 2) Background fetch flow
+- `FetchFunction` is triggered by EventBridge on a schedule.
+- It reads all schools and finds the unique station IDs in use.
+- For each station, it calls the WAQI feed endpoint using the station ID.
+- It validates the response and checks whether the reading is newer than the stored reading.
+- It converts the AQI data to estimated µg/m³ values and then to an India-style action level.
+- It computes the worse of PM2.5 and PM10, since the final school status is based on the more severe condition.
+- It updates DynamoDB with the latest reading and the derived school level.
+
+### 3) Alert generation flow
+- The app keeps the previous level for comparison.
+- If the current level is worse than the prior level, the Lambda raises an alert.
+- The alert is written to the Alerts table and published to the correct SNS topic.
+- Public-school alerts go to `SchoolAlertsTopic`.
+- Demo alerts go to `DemoAlertsTopic`.
+- The alert message includes the school name, old-to-new level change, recommendation, and attribution credit notice.
+
+### 4) Subscription flow
+- A visitor or parent submits an email, role, and school selection.
+- The API validates:
+  - valid email format
+  - role must be `parent`, `principal`, or `pe_teacher`
+  - selected school exists
+  - the school is not the demo school
+  - request count is under rate limits
+  - email is not being re-requested too soon
+- The backend triggers the SNS subscription flow.
+- If the email already has a confirmed subscription, it merges the selected school IDs into the existing filter policy.
+- Otherwise it creates a subscription and asks the user to confirm by email.
+- The API responds with a 202 and a confirmation message.
+
+### 5) Demo simulation flow
+- Only the owner can use simulation controls.
+- The frontend asks for a demo key.
+- The key is kept in React state only and is never stored in localStorage or persistent storage.
+- `POST /simulate` requires the `x-demo-key` header.
+- `POST /simulate/reset` also requires the same key.
+- The demo school is always read-only for visitors.
+- Simulation uses a cooldown and expiry time to prevent abuse.
+
+## Data model
+
+### School record
+Each school record in DynamoDB includes:
+- `school_id`
+- `display_name`
+- `station_id`
+- `contact_email`
+- `current_level`
+- `category_label`
+- `driving_pollutant`
+- `est_pm25`
+- `est_pm10`
+- `pm25_subindex`
+- `pm10_subindex`
+- `source_timestamp`
+- `last_updated`
+- `station_name`
+- `attribution`
+- `is_demo_school`
+- `is_simulated`
+- `baseline_level`
+- `sim_expires_at`
+- `last_sim_at`
+
+### Alert record
+Each alert record captures:
+- `school_id`
+- `timestamp`
+- `from_level`
+- `to_level`
+- `status`
+- `is_demo`
+
+## Level logic
+The project converts raw AQI sub-index values to estimated Indian CPCB-band categories. The logic follows the PM2.5 and PM10 worse-of-two rule.
+
+- Level 0: Good / Satisfactory
+- Level 1: Moderate
+- Level 2: Poor
+- Level 3: Very Poor / Severe
+
+This is displayed with clear text and color styling in the frontend.
+
+## Key rules implemented
+- Fetch by station ID (`feed/@<id>`) rather than coordinates
+- Use `time.iso` for timestamps
+- Ignore stale or duplicate data
+- Treat readings older than 3 hours as unavailable
+- Keep only the latest reading per school
+- Always attribute the source data to WAQI and the origin agency
+- Show the recommendation appropriate to the final school level
+- Do not expose secrets in the client or repository
+
+## Repository structure
+
+```text
+SafeRecess/
+├── .aws-sam/                 # SAM build output
+├── backend/
+│   └── lambda/
+│       ├── alerts.js         # Alert formatting and SNS publish logic
+│       ├── api.js            # HTTP API handlers for schools, subscribe, simulate
+│       ├── convert.js        # AQI conversion and level mapping
+│       ├── fetch.js          # Scheduled WAQI fetch process
+│       ├── parse.js          # WAQI parsing helpers
+│       ├── seed.js           # Seed data loader for schools and stations
+│       ├── store.js          # DynamoDB and in-memory store abstraction
+│       ├── *.test.js         # Unit tests for conversion, data flow, subscriptions
+│       └── package.json      # Backend dependencies
+├── data/
+│   └── stations_and_schools.json
+├── frontend/
+│   └── src/
+├── src/
+│   ├── App.jsx              # Frontend dashboard UI
+│   ├── main.jsx             # React bootstrap
+│   ├── index.css            # Styling and level colors
+│   └── api.js               # Frontend API helper layer
+├── .env                     # Local environment values (keep out of repo)
+├── template.yaml            # AWS SAM template
+├── package.json             # Root Vite app package
+├── README.md                # Project documentation
+├── FRONTEND.md              # Frontend-specific design doc
+├── PRD.md                   # Product requirements
+├── CLAUDE.md                # Implementation notes
+├── PLAN.md                  # Planning docs
+└── ...
+```
+
+## Local development setup
+
+### Prerequisites
+- Node.js 18+ or 20+
+- npm
+- AWS SAM CLI
+- Optional: AWS credentials configured for deployment and testing
+
+### Install dependencies
+From the project root:
+
 ```bash
-# Validate SAM template
+npm install
+cd backend/lambda
+npm install
+cd ../..
+```
+
+### Start the frontend locally
+```bash
+npm run dev
+```
+
+The app will run using the Vite dev server. If you want to use mock data locally:
+
+```bash
+VITE_USE_MOCK=true npm run dev
+```
+
+### Frontend environment variables
+Set these in your environment or `.env` file:
+
+```bash
+VITE_API_URL=http://localhost:3000
+VITE_USE_MOCK=false
+```
+
+The backend Lambda environment variables are configured through AWS SAM template parameters, not directly in the frontend.
+
+## Backend deployment and build
+
+### Validate the SAM template
+```bash
 sam validate -t template.yaml
+```
 
-# Build the project
+### Build the application
+```bash
 sam build
+```
 
-# Local testing (if needed)
-sam local invoke FetchFunction -e events/event.json
-sam local start-api
-
-# Deployment
+### Deploy to AWS
+```bash
 sam deploy --guided
 ```
 
-## Next Steps
-1. Complete Phase 3 frontend integration (subscribe drawer, demo key controls)
-2. Role-specific message wording for subscriptions (parents vs staff)
-3. Recent alerts panel
-4. End-to-end testing with live deployment
-5. Demo video recording and submission preparation
+You will be prompted for values such as:
+- `AlertEmail`
+- `WaqiToken`
+- `DemoKey`
+- `AllowedOrigin`
 
----
-*This implements the SafeRecess project as specified in FRONTEND.md, PRD.md, and CLAUDE.md with security-first implementation adhering to all constraints.*
+## Runtime environment variables
+The Lambda functions use these environment values:
+- `WAQI_TOKEN`
+- `DEMO_KEY`
+- `DEMO_INBOX`
+- `SCHOOLS_TABLE`
+- `ALERTS_TABLE_NAME`
+- `ALERT_TOPIC_ARN`
+- `SCHOOL_ALERTS_TOPIC_ARN`
+- `DEMO_ALERTS_TOPIC_ARN`
+- `STALE_AFTER_HOURS`
+- `AWS_REGION`
+
+## API behavior summary
+
+### `GET /schools`
+Returns the public list of all schools.
+- sorted by severity
+- includes recommendation and attribution
+- marks stale or unavailable data correctly
+
+### `GET /schools/{id}`
+Returns one school by ID.
+
+### `GET /alerts`
+Returns recent alert events for a selected school, including demo alerts when requested.
+
+### `POST /subscribe`
+Request body:
+```json
+{
+  "email": "parent@example.com",
+  "role": "parent",
+  "school_ids": ["najafgarh-a", "okhla-b"]
+}
+```
+
+Behavior:
+- validates email and role
+- ensures each school exists
+- rejects the demo school
+- limits the number of selected schools
+- applies throttling for repeated requests
+- creates or merges SNS filter policy for email subscriptions
+
+### `POST /simulate`
+Requires `x-demo-key` header.
+
+Request example:
+```bash
+curl -X POST https://.../simulate \
+  -H "x-demo-key: YOUR_DEMO_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"severity":"poor"}'
+```
+
+This updates the demo school state to a simulated air-quality condition.
+
+### `POST /simulate/reset`
+Resets the demo school to its baseline state.
+
+## Security notes
+SafeRecess follows a security-first design:
+- No secrets are committed to the frontend
+- WAQI token and demo key live in Lambda environment variables only
+- The demo key is validated server-side and never stored in browser storage
+- SNS subscriptions use filtering to target school IDs
+- Input validation blocks invalid emails, invalid school IDs, and bad roles
+- API rate limits reduce abuse and bot spam
+- Deployment uses least-privilege IAM permissions
+
+## Testing
+Backend tests are included for:
+- data conversion logic
+- WAQI parsing and validation
+- alert generation
+- subscription validation and abuse prevention
+- demo-key protection
+
+Run tests from the project root or backend folder:
+
+```bash
+npm test
+```
+
+Or in the backend Lambda package:
+
+```bash
+cd backend/lambda
+npm test
+```
+
+## Example user journey
+
+1. A parent opens the dashboard and sees the status of all sample schools.
+2. One school moves from Moderate to Poor.
+3. The scheduled fetch saves the new status to DynamoDB.
+4. The backend detects the worse level and sends an alert.
+5. The parent sees the school card update and receives the email after subscription confirmation.
+6. A school owner logs in to the owner-only demo view and simulates a severe spike for a presentation or judging scenario.
+
+## Future enhancements
+- Recent alert history panel in the dashboard
+- More expressive role-based subscription messaging
+- Better owner/admin dashboard management
+- Additional AWS observability and CloudWatch metrics
+- More realistic public deployment configuration for final demo hosting
+
+## Final notes
+SafeRecess is designed to be a clear, production-style demo of how AWS services can support a public-health decision system. It focuses on a real event-driven workflow:
+- collect live station data,
+- transform it into decision-ready school status,
+- distribute alerts automatically,
+- and keep the demo secure.
+
+The project is intentionally simple, readable, and practical: no unnecessary abstraction, no secret leakage, and no heavy app framework overhead.
