@@ -16,6 +16,14 @@ Parameters:
     Type: String
     NoEcho: true
     Description: WAQI API token used by the scheduled fetch Lambda.
+  DemoKey:
+    Type: String
+    NoEcho: true
+    Description: Demo key required to access simulation endpoints.
+  AllowedOrigin:
+    Type: String
+    Default: "*"
+    Description: Allowed origin for CORS (set to Amplify domain once known).
 
 Globals:
   Function:
@@ -29,7 +37,10 @@ Globals:
         SCHOOLS_TABLE: !Ref SchoolsTable
         ALERTS_TABLE_NAME: !Ref AlertsTable
         ALERT_TOPIC_ARN: !Ref AlertTopic
+        SCHOOL_ALERTS_TOPIC_ARN: !Ref SchoolAlertsTopic
+        DEMO_ALERTS_TOPIC_ARN: !Ref DemoAlertsTopic
         DEMO_INBOX: !Ref AlertEmail
+        DEMO_KEY: !Ref DemoKey
         STALE_AFTER_HOURS: '3'
 
 Resources:
@@ -66,6 +77,19 @@ Resources:
         - Endpoint: !Ref AlertEmail
           Protocol: email
 
+  SchoolAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: SchoolAlertsTopic
+
+  DemoAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: DemoAlertsTopic
+      Subscription:
+        - Endpoint: !Ref AlertEmail
+          Protocol: email
+
   FetchFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -93,6 +117,10 @@ Resources:
             TableName: !Ref AlertsTable
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt AlertTopic.TopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt SchoolAlertsTopic.TopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt DemoAlertsTopic.TopicName
       Events:
         EveryThirtyMinutes:
           Type: Schedule
@@ -120,6 +148,10 @@ Resources:
       Environment:
         Variables:
           ALERT_TOPIC_ARN: !Ref AlertTopic
+          SCHOOL_ALERTS_TOPIC_ARN: !Ref SchoolAlertsTopic
+          DEMO_ALERTS_TOPIC_ARN: !Ref DemoAlertsTopic
+          ALERT_EMAIL: !Ref AlertEmail
+          DEMO_KEY: !Ref DemoKey
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SchoolsTable
@@ -127,6 +159,17 @@ Resources:
             TableName: !Ref AlertsTable
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt AlertTopic.TopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt SchoolAlertsTopic.TopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt DemoAlertsTopic.TopicName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sns:Subscribe
+                - sns:ListSubscriptionsByTopic
+                - sns:SetSubscriptionAttributes
+              Resource: !Ref SchoolAlertsTopic
       Events:
         ListSchools:
           Type: HttpApi
@@ -146,6 +189,12 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /alerts
             Method: GET
+        Subscribe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /subscribe
+            Method: POST
         Simulate:
           Type: HttpApi
           Properties:
@@ -165,9 +214,10 @@ Resources:
       StageName: $default
       CorsConfiguration:
         AllowOrigins:
-          - '*'
+          - !Ref AllowedOrigin
         AllowHeaders:
           - content-type
+          - x-demo-key
         AllowMethods:
           - GET
           - POST
@@ -195,6 +245,11 @@ Resources:
                   description: Response from Lambda integration
           /alerts:
             get:
+              responses:
+                default:
+                  description: Response from Lambda integration
+          /subscribe:
+            post:
               responses:
                 default:
                   description: Response from Lambda integration
@@ -228,3 +283,9 @@ Outputs:
   AlertTopicArn:
     Description: ARN of the SNS alert topic.
     Value: !Ref AlertTopic
+  SchoolAlertsTopicArn:
+    Description: ARN of the school alerts SNS topic.
+    Value: !Ref SchoolAlertsTopic
+  DemoAlertsTopicArn:
+    Description: ARN of the demo alerts SNS topic.
+    Value: !Ref DemoAlertsTopic

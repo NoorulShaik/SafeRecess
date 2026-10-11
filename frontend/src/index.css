@@ -1,0 +1,66 @@
+:root { font-family: system-ui, sans-serif; color: #18342b; background: #f5f7f1; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+.app { max-width: 1200px; margin: auto; padding: 30px 20px 40px; }
+.hero { padding: 15px 0 25px; }
+.hero h1 { margin: 5px 0 10px; font-size: clamp(2rem, 5vw, 4rem); line-height: 1; }
+.subtitle { margin: 0; color: #60756c; font-size: 1.05rem; }
+.eyebrow { color: #ef7d4d; font-size: .72rem; font-weight: 800; letter-spacing: .14em; margin: 0 0 7px; }
+.notice, .demo-panel, .alert-status { border-radius: 14px; padding: 16px 18px; display: flex; gap: 18px; align-items: center; }
+.notice { background: #e0eee0; color: #315a44; }
+.notice strong { white-space: nowrap; }
+.connection-note { color: #99501f; background: #fff0dc; padding: 10px 14px; border-radius: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 15px; margin: 24px 0; color: #60756c; font-size: .88rem; }
+.legend span { display: flex; gap: 7px; align-items: center; }
+.legend i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.level-0 { --accent: #3b9568; } .level-1 { --accent: #d6962f; } .level-2 { --accent: #e87547; } .level-3 { --accent: #bb4c59; } .unavailable { --accent: #8c9995; }
+.legend .level-0 { background: #3b9568; } .legend .level-1 { background: #d6962f; } .legend .level-2 { background: #e87547; } .legend .level-3 { background: #bb4c59; }
+.dashboard-heading { display: flex; justify-content: space-between; align-items: end; margin: 25px 0 14px; }
+.dashboard-heading h2, .demo-panel h2, .alert-status h2 { margin: 0; font-size: 1.4rem; }
+.dashboard-heading > span { color: #76867e; font-size: .9rem; }
+.school-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+.school-card { border-left: 5px solid var(--accent); background: white; border-radius: 10px; padding: 16px; box-shadow: 0 4px 15px #18342b0c; }
+.card-top { display: flex; justify-content: space-between; align-items: center; }
+.level-badge, .demo-tag { color: var(--accent); font-size: .73rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
+.demo-tag { color: #a15a27; background: #fff0dc; padding: 4px 7px; border-radius: 5px; }
+.school-card h2 { font-size: 1.05rem; margin: 18px 0 5px; }
+.school-card p { color: #60756c; font-size: .9rem; }
+.school-card .category { color: var(--accent); font-weight: 800; margin: 0; }
+.pollutants { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+.pollutants div { background: #f5f7f1; border-radius: 7px; padding: 9px; }
+.pollutants strong, .pollutants span { display: block; }
+.pollutants strong { font-size: .72rem; color: #60756c; }
+.pollutants span { color: #18342b; font-weight: 700; margin-top: 3px; }
+.school-card small { display: block; color: #8a9791; margin-top: 7px; font-size: .75rem; }
+.subscribe-form { border-top: 1px solid #e4ebe5; margin-top: 14px; padding-top: 12px; }
+.subscribe-form label { display: block; color: #60756c; font-size: .78rem; margin-bottom: 6px; }
+.subscribe-row { display: flex; gap: 6px; }
+.subscribe-row input { min-width: 0; flex: 1; border: 1px solid #cbd8ce; border-radius: 6px; padding: 8px; }
+button { border: 0; border-radius: 7px; padding: 8px 11px; background: #ef7d4d; color: white; font-weight: 700; }
+button.secondary { background: transparent; border: 1px solid #8ca197; }
+button:disabled { opacity: .5; cursor: wait; }
+.form-success { color: #2f8057 !important; } .form-error { color: #ad443f !important; }
+.demo-panel { margin-top: 26px; justify-content: space-between; background: #18342b; color: white; }
+.demo-panel p:not(.eyebrow) { color: #b9cbc2; margin-bottom: 0; }
+.demo-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: end; }
+.demo-key-label { display: flex; flex-direction: column; gap: 4px; color: #b9cbc2; font-size: .72rem; font-weight: 700; }
+.demo-key-label input { width: 190px; border: 1px solid #8ca197; border-radius: 6px; padding: 7px; background: #24483c; color: white; }
+.alert-status { margin-top: 14px; background: #fff0dc; color: #713e26; justify-content: space-between; }
+.alert-status p:not(.eyebrow) { margin-bottom: 0; }
+.alert-status strong { white-space: nowrap; }
+footer { color: #7a8b83; font-size: .76rem; margin-top: 26px; line-height: 1.6; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
+.controls label, .subscribe-drawer label { display: flex; flex-direction: column; gap: 5px; color: #60756c; font-size: .78rem; font-weight: 700; }
+.controls input, .controls select, .subscribe-drawer input, .subscribe-drawer select { border: 1px solid #cbd8ce; border-radius: 6px; padding: 8px; background: white; color: #18342b; }
+.controls input { min-width: 230px; }
+.subscribe-drawer input, .subscribe-drawer select { width: 100%; }
+.drawer-backdrop { position: fixed; inset: 0; display: flex; justify-content: flex-end; background: #18342b66; z-index: 10; }
+.subscribe-drawer { position: relative; width: min(420px, 100%); height: 100%; padding: 30px 24px; background: #f5f7f1; box-shadow: -8px 0 24px #18342b33; }
+.subscribe-drawer h2 { margin-top: 0; }
+.subscribe-drawer form { display: grid; gap: 10px; }
+.drawer-close { position: absolute; top: 14px; right: 14px; padding: 2px 9px; font-size: 1.4rem; line-height: 1.2; }
+.subscribe-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.no-results { color: #60756c; }
+@media (max-width: 680px) { .app { padding: 20px 14px 30px; } .notice, .demo-panel, .alert-status { align-items: flex-start; flex-direction: column; } .demo-actions { justify-content: start; } }

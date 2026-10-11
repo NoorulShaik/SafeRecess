@@ -1,0 +1,333 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SafeRecess air-quality alerts backend
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+      - E2001
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Email address that receives SafeRecess alert notifications.
+  WaqiToken:
+    Type: String
+    NoEcho: true
+    Description: WAQI API token used by the scheduled fetch Lambda.
+  DemoKey:
+    Type: String
+    NoEcho: true
+    Description: Demo key required to access simulation endpoints.
+  AllowedOrigin:
+    Type: String
+    Default: '*'
+    Description: Allowed origin for CORS (set to Amplify domain once known).
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Architectures:
+    - arm64
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        SCHOOLS_TABLE:
+          Ref: SchoolsTable
+        ALERTS_TABLE_NAME:
+          Ref: AlertsTable
+        ALERT_TOPIC_ARN:
+          Ref: AlertTopic
+        SCHOOL_ALERTS_TOPIC_ARN:
+          Ref: SchoolAlertsTopic
+        DEMO_ALERTS_TOPIC_ARN:
+          Ref: DemoAlertsTopic
+        DEMO_INBOX:
+          Ref: AlertEmail
+        DEMO_KEY:
+          Ref: DemoKey
+        STALE_AFTER_HOURS: '3'
+Resources:
+  SchoolsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: school_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: school_id
+        KeyType: HASH
+  AlertsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: school_id
+        AttributeType: S
+      - AttributeName: timestamp
+        AttributeType: S
+      KeySchema:
+      - AttributeName: school_id
+        KeyType: HASH
+      - AttributeName: timestamp
+        KeyType: RANGE
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Endpoint:
+          Ref: AlertEmail
+        Protocol: email
+  SchoolAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: SchoolAlertsTopic
+  DemoAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: DemoAlertsTopic
+      Subscription:
+      - Endpoint:
+          Ref: AlertEmail
+        Protocol: email
+  FetchFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Banner:
+        - js=import { createRequire } from 'module';const require = createRequire(import.meta.url);
+        Format: esm
+        OutExtension:
+        - .js=.mjs
+        Sourcemap: true
+        Target: es2022
+        UseNpmCi: true
+      SamResourceId: FetchFunction
+    Properties:
+      CodeUri: FetchFunction
+      Handler: fetch.handler
+      Timeout: 30
+      Environment:
+        Variables:
+          WAQI_TOKEN:
+            Ref: WaqiToken
+          NODE_OPTIONS: ' --enable-source-maps'
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: SchoolsTable
+      - DynamoDBWritePolicy:
+          TableName:
+            Ref: AlertsTable
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - AlertTopic
+            - TopicName
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - SchoolAlertsTopic
+            - TopicName
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - DemoAlertsTopic
+            - TopicName
+      Events:
+        EveryThirtyMinutes:
+          Type: Schedule
+          Properties:
+            Schedule: rate(30 minutes)
+            Enabled: true
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Banner:
+        - js=import { createRequire } from 'module';const require = createRequire(import.meta.url);
+        Format: esm
+        OutExtension:
+        - .js=.mjs
+        Sourcemap: true
+        Target: es2022
+        UseNpmCi: true
+      SamResourceId: ApiFunction
+    Properties:
+      CodeUri: ApiFunction
+      Handler: api.handler
+      Timeout: 10
+      Environment:
+        Variables:
+          ALERT_TOPIC_ARN:
+            Ref: AlertTopic
+          SCHOOL_ALERTS_TOPIC_ARN:
+            Ref: SchoolAlertsTopic
+          DEMO_ALERTS_TOPIC_ARN:
+            Ref: DemoAlertsTopic
+          ALERT_EMAIL:
+            Ref: AlertEmail
+          DEMO_KEY:
+            Ref: DemoKey
+          NODE_OPTIONS: ' --enable-source-maps'
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: SchoolsTable
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AlertsTable
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - AlertTopic
+            - TopicName
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - SchoolAlertsTopic
+            - TopicName
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - DemoAlertsTopic
+            - TopicName
+      - Statement:
+        - Effect: Allow
+          Action:
+          - sns:Subscribe
+          - sns:ListSubscriptionsByTopic
+          - sns:SetSubscriptionAttributes
+          Resource:
+            Ref: SchoolAlertsTopic
+      Events:
+        ListSchools:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /schools
+            Method: GET
+        GetSchool:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /schools/{id}
+            Method: GET
+        ListAlerts:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /alerts
+            Method: GET
+        Subscribe:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /subscribe
+            Method: POST
+        Simulate:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /simulate
+            Method: POST
+        ResetSimulation:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: HttpApi
+            Path: /simulate/reset
+            Method: POST
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins:
+        - Ref: AllowedOrigin
+        AllowHeaders:
+        - content-type
+        - x-demo-key
+        AllowMethods:
+        - GET
+        - POST
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title: SafeRecess API
+          version: '1.0'
+        paths:
+          /schools:
+            get:
+              responses:
+                default:
+                  description: Response from Lambda integration
+          /schools/{id}:
+            get:
+              parameters:
+              - name: id
+                in: path
+                required: true
+                schema:
+                  type: string
+              responses:
+                default:
+                  description: Response from Lambda integration
+          /alerts:
+            get:
+              responses:
+                default:
+                  description: Response from Lambda integration
+          /subscribe:
+            post:
+              responses:
+                default:
+                  description: Response from Lambda integration
+          /simulate:
+            post:
+              x-amazon-apigateway-throttling:
+                burstLimit: 10
+                rateLimit: 5
+              responses:
+                default:
+                  description: Response from Lambda integration
+          /simulate/reset:
+            post:
+              x-amazon-apigateway-throttling:
+                burstLimit: 10
+                rateLimit: 5
+              responses:
+                default:
+                  description: Response from Lambda integration
+Outputs:
+  ApiUrl:
+    Description: URL of the SafeRecess HTTP API.
+    Value:
+      Fn::Sub: https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  SchoolsTableName:
+    Description: Generated name of the schools DynamoDB table.
+    Value:
+      Ref: SchoolsTable
+  AlertsTableName:
+    Description: Generated name of the alerts DynamoDB table.
+    Value:
+      Ref: AlertsTable
+  AlertTopicArn:
+    Description: ARN of the SNS alert topic.
+    Value:
+      Ref: AlertTopic
+  SchoolAlertsTopicArn:
+    Description: ARN of the school alerts SNS topic.
+    Value:
+      Ref: SchoolAlertsTopic
+  DemoAlertsTopicArn:
+    Description: ARN of the demo alerts SNS topic.
+    Value:
+      Ref: DemoAlertsTopic
