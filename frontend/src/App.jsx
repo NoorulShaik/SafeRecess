@@ -9,22 +9,37 @@ function pollutantValue(value) {
   return value === null || value === undefined ? '—' : `${Number(value).toFixed(1)} µg/m³`
 }
 
+function pollutantLabel(pollutant) {
+  return { pm25: 'PM2.5', pm10: 'PM10' }[pollutant] || pollutant.toUpperCase()
+}
+
+function formatReadingTime(timestamp) {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date(timestamp)).replace(/\b(am|pm)\b/i, match => match.toUpperCase()) + ' IST'
+}
+
 function SchoolCard({ school, onSubscribe }) {
   return (
     <article className={`school-card ${levelClass(school.level)}`}>
       <div className="card-top">
         <span className="level-badge">{school.level === null ? 'Unavailable' : `Level ${school.level}`}</span>
-        {school.is_demo_school && <span className="demo-tag">DEMO</span>}
+        {school.is_demo_school && <span className="demo-tag">{school.is_simulated ? 'SIMULATED' : 'DEMO'}</span>}
       </div>
-      <h2>{school.display_name}</h2>
+      <h2>{school.is_demo_school ? 'Demo school (owner only)' : school.display_name}</h2>
       <p className="category">{school.category_label}</p>
       <div className="pollutants">
         <div><strong>PM2.5</strong><span>{pollutantValue(school.est_pm25)}</span></div>
         <div><strong>PM10</strong><span>{pollutantValue(school.est_pm10)}</span></div>
       </div>
       <p>{school.recommendation}</p>
-      {school.driving_pollutant && <small>Driving pollutant: {school.driving_pollutant.toUpperCase()}</small>}
-      {school.reading_timestamp && <small>Reading: {new Date(school.reading_timestamp).toLocaleString()}</small>}
+      {school.driving_pollutant && <small>Driving pollutant: {pollutantLabel(school.driving_pollutant)}</small>}
+      {school.reading_timestamp && <small>Reading: {formatReadingTime(school.reading_timestamp)}</small>}
       {school.station_name && <small>Station: {school.station_name}</small>}
       {!school.is_demo_school && (
         <button type="button" onClick={() => onSubscribe(school)} aria-label={`Subscribe to alerts for ${school.display_name}`}>
@@ -188,11 +203,12 @@ function App() {
       <header className="hero">
         <div>
           <p className="eyebrow">SAFE RECESS · DELHI</p>
-          <h1>School air quality at a glance.</h1>
-          <p className="subtitle">See the actual estimated PM2.5 and PM10 values, then subscribe to alerts for one school.</p>
+          <h1>Is the air safe for school today?</h1>
+          <p className="subtitle">Live air quality for every school, a plain-language call on outdoor activity, and an email alert the moment it gets worse.</p>
+          <em>A simple idea, made useful.</em>
         </div>
       </header>
-      <section className="notice"><strong>Estimated readings</strong><span>Values are estimated from WAQI AQI sub-indices using the configured EPA conversion. Confirmed subscribers receive an email when their selected school worsens.</span></section>
+      <section className="notice"><strong>Estimated readings</strong><span>Hourly readings from nearby monitoring stations, converted into India's air-quality bands. These are sample schools in a demo project, not real school data.</span></section>
       {error && <p className="connection-note" role="alert">API unavailable — showing error. {error}</p>}
       {loading && <p className="connection-note" role="status">Loading school data…</p>}
       <div className="legend">{[['level-0', 'Good / Satisfactory'], ['level-1', 'Moderate'], ['level-2', 'Poor'], ['level-3', 'Very Poor / Severe']].map(([className, text]) => <span key={className}><i className={className} />{text}</span>)}</div>
@@ -205,10 +221,15 @@ function App() {
       <section className="school-grid" aria-label="List of schools with air quality status">
         {filteredSchools.filter(school => !school.is_demo_school).map(school => <SchoolCard key={school.school_id} school={school} onSubscribe={openSubscribe} />)}
         {!loading && filteredSchools.filter(school => !school.is_demo_school).length === 0 && <p className="no-results">No schools match the current filters.</p>}
+        {!loading && schools.find(school => school.is_demo_school) && <SchoolCard school={schools.find(school => school.is_demo_school)} onSubscribe={openSubscribe} />}
       </section>
       {schools.find(school => school.is_demo_school) && <section className="demo-panel"><div><p className="eyebrow">TEST THE ALERT FLOW</p><h2>Demo school simulation</h2><p>Only the labelled demo school changes. Subscribers must confirm their email before receiving SNS alerts.</p></div><div className="demo-actions"><label className="demo-key-label" htmlFor="demo-key">Demo key<input id="demo-key" type="password" value={demoKey} onChange={event => setDemoKey(event.target.value)} placeholder="Paste backend demo key" autoComplete="off" /></label>{['moderate', 'poor', 'very_poor'].map(severity => <button key={severity} disabled={demoBusy || !demoKey.trim()} onClick={() => simulate(severity)}>{severity.replace('_', ' ')}</button>)}<button className="secondary" disabled={demoBusy || !demoKey.trim()} onClick={resetDemo}>Reset</button></div></section>}
       {alertStatus && <section className="alert-status" role="status"><div><p className="eyebrow">ALERT STATUS</p><p>{alertStatus.message}</p></div><strong>{alertStatus.sns_status}</strong></section>}
-      <footer>Data credits: World Pollution Index Project and the originating agency returned by the feed. SafeRecess shows estimated categories and is not medical advice.</footer>
+      <footer>
+        <p><em>A simple idea, made useful.</em></p>
+        <p>Air quality data: World Air Quality Index Project (<a href="https://waqi.info/" target="_blank" rel="noopener noreferrer">https://waqi.info/</a>) and the stations' originating agencies, including the Delhi Pollution Control Committee, Government of NCT of Delhi (<a href="http://dpccairdata.com/" target="_blank" rel="noopener noreferrer">http://dpccairdata.com/</a>).</p>
+        <p>General guidance, not medical advice; follow official advisories.</p>
+      </footer>
       <SubscribeDrawer school={subscribeSchool} form={subscribeForm} busy={subscribeBusy} error={subscribeError} success={subscribeSuccess} onChange={updateSubscribeForm} onClose={closeSubscribe} onSubmit={submitSubscribe} />
     </main>
   )

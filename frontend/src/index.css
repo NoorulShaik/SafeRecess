@@ -51,6 +51,8 @@ button:disabled { opacity: .5; cursor: wait; }
 .alert-status p:not(.eyebrow) { margin-bottom: 0; }
 .alert-status strong { white-space: nowrap; }
 footer { color: #7a8b83; font-size: .76rem; margin-top: 26px; line-height: 1.6; }
+footer p { margin: 0 0 8px; }
+footer p:last-child { margin-bottom: 0; }
 .controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
 .controls label, .subscribe-drawer label { display: flex; flex-direction: column; gap: 5px; color: #60756c; font-size: .78rem; font-weight: 700; }
 .controls input, .controls select, .subscribe-drawer input, .subscribe-drawer select { border: 1px solid #cbd8ce; border-radius: 6px; padding: 8px; background: white; color: #18342b; }
